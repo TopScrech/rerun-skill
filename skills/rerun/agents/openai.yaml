@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rerun"
+  short_description: "Build and rerun through Xcode’s native MCP server"
+  default_prompt: "Use $rerun to rerun the current Xcode scheme on its running or selected device"
