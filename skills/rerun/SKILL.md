@@ -38,7 +38,12 @@ Do not boot a simulator unless the user requested it or explicitly chose it for 
 
 - Build only: call native `BuildProject` with the discovered workspace/tab identifier
 - Rerun: call native `RunProject` with that identifier, equivalent to Xcode Run
-- Preserve the requested debugger behavior; for an ordinary development rerun use `attachDebugger: true` when supported unless the user requested otherwise
+- Preserve the active scheme’s Run action “Debug executable” setting unless the user explicitly requests a debugger override
+- Read that setting through native scheme inspection when available; otherwise inspect the matching `.xcscheme` file read-only, resolving the active scheme’s container and user/shared scheme before using its `LaunchAction` debugger configuration
+- Set `attachDebugger` to the verified setting: `true` when enabled, `false` when disabled — do not infer it from Debug/Release names or a previous agent launch
+- Omit `attachDebugger` only if the discovered native tool explicitly documents that omission preserves the scheme setting; a fixed default such as `false` does not preserve it
+- If the setting cannot be established and the native tool cannot inherit it, ask one focused question before launching instead of choosing a debugger mode
+- Do not edit the scheme to match the tool’s default
 - Let Xcode use its existing configuration, Derived Data, package checkouts, and compilation cache
 - Do not clean, delete caches, create a fresh Derived Data directory, change signing, or update packages merely to rerun
 - Do not call `StopProject` after a successful launch — the requested result is an app left running
@@ -69,13 +74,13 @@ Send one JSON object per line, inspect each response before dependent actions:
 ```
 
 Read the returned tool schemas before sending the remaining requests
-For versions exposing `tabIdentifier`, a typical sequence is:
+For versions exposing `tabIdentifier`, first verify the scheme and destination:
 
 ```json
 {"name":"XcodeListRunDestinations","arguments":{"tabIdentifier":"<discovered-tab>"}}
-{"name":"RunProject","arguments":{"tabIdentifier":"<discovered-tab>","attachDebugger":true}}
 ```
 
+After resolving “Debug executable” as described above, call `RunProject` with the discovered tab identifier and the matching boolean `attachDebugger` value
 Use `BuildProject` instead of `RunProject` for build-only requests
 The script prints one JSON response per request and retains the bridge session across calls
 Poll the terminal session in bounded intervals while an action is pending; do not submit the same action again
